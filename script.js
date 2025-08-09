@@ -335,15 +335,175 @@ class UglianoSpearfishingApp {
                 position: 'bottomleft'
             }).addTo(this.map);
 
-            // Aggiungi controllo fullscreen
-            if (L.Control.Fullscreen) {
-                L.Control.Fullscreen.addTo(this.map);
-            }
+            // Aggiungi controllo fullscreen personalizzato
+            this.addFullscreenControl();
+
+            // Aggiungi evento tap per fullscreen
+            this.setupFullscreenTap();
 
             console.log('✅ Mappa inizializzata con successo');
         } catch (error) {
             console.error('❌ Errore inizializzazione mappa:', error);
             this.showErrorMessage('Errore nel caricamento della mappa. Ricarica la pagina.');
+        }
+    }
+
+    // Aggiungi controllo fullscreen personalizzato
+    addFullscreenControl() {
+        // Crea controllo fullscreen personalizzato
+        const FullscreenControl = L.Control.extend({
+            options: {
+                position: 'topright'
+            },
+            
+            onAdd: function() {
+                const container = L.DomUtil.create('div', 'leaflet-control-fullscreen');
+                container.innerHTML = `
+                    <button class="fullscreen-btn" title="Schermo intero">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                `;
+                
+                container.onclick = () => {
+                    this.toggleFullscreen();
+                };
+                
+                return container;
+            },
+            
+            toggleFullscreen: function() {
+                const mapContainer = document.getElementById('map');
+                if (!document.fullscreenElement) {
+                    // Entra in fullscreen
+                    if (mapContainer.requestFullscreen) {
+                        mapContainer.requestFullscreen();
+                    } else if (mapContainer.webkitRequestFullscreen) {
+                        mapContainer.webkitRequestFullscreen();
+                    } else if (mapContainer.msRequestFullscreen) {
+                        mapContainer.msRequestFullscreen();
+                    }
+                } else {
+                    // Esci dal fullscreen
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
+                }
+            }
+        });
+        
+        // Crea un'istanza del controllo e aggiungila alla mappa
+        const fullscreenControl = new FullscreenControl();
+        fullscreenControl.addTo(this.map);
+    }
+
+    // Setup tap per fullscreen
+    setupFullscreenTap() {
+        const mapContainer = document.getElementById('map');
+        
+        // Aggiungi evento fullscreen change
+        document.addEventListener('fullscreenchange', () => {
+            this.handleFullscreenChange();
+        });
+        document.addEventListener('webkitfullscreenchange', () => {
+            this.handleFullscreenChange();
+        });
+        document.addEventListener('msfullscreenchange', () => {
+            this.handleFullscreenChange();
+        });
+        
+        // Aggiungi evento tap per entrare in fullscreen
+        let tapCount = 0;
+        let tapTimer = null;
+        
+        mapContainer.addEventListener('click', (e) => {
+            // Ignora click sui controlli della mappa
+            if (e.target.closest('.leaflet-control') || e.target.closest('.leaflet-popup')) {
+                return;
+            }
+            
+            tapCount++;
+            
+            if (tapCount === 1) {
+                tapTimer = setTimeout(() => {
+                    tapCount = 0;
+                }, 300);
+            } else if (tapCount === 2) {
+                clearTimeout(tapTimer);
+                tapCount = 0;
+                
+                // Doppio tap per fullscreen
+                if (!document.fullscreenElement) {
+                    if (mapContainer.requestFullscreen) {
+                        mapContainer.requestFullscreen();
+                    } else if (mapContainer.webkitRequestFullscreen) {
+                        mapContainer.webkitRequestFullscreen();
+                    } else if (mapContainer.msRequestFullscreen) {
+                        mapContainer.msRequestFullscreen();
+                    }
+                }
+            }
+        });
+    }
+
+    // Gestisci cambio fullscreen
+    handleFullscreenChange() {
+        const mapContainer = document.getElementById('map');
+        const isFullscreen = !!document.fullscreenElement || !!document.webkitFullscreenElement || !!document.msFullscreenElement;
+        
+        if (isFullscreen) {
+            // Aggiungi pulsante X per uscire
+            this.addExitFullscreenButton();
+            mapContainer.classList.add('fullscreen-mode');
+        } else {
+            // Rimuovi pulsante X
+            this.removeExitFullscreenButton();
+            mapContainer.classList.remove('fullscreen-mode');
+        }
+        
+        // Ridisegna la mappa per adattarsi alle nuove dimensioni
+        setTimeout(() => {
+            this.map.invalidateSize();
+        }, 100);
+    }
+
+    // Aggiungi pulsante X per uscire dal fullscreen
+    addExitFullscreenButton() {
+        const mapContainer = document.getElementById('map');
+        
+        // Rimuovi pulsante esistente se presente
+        this.removeExitFullscreenButton();
+        
+        // Crea pulsante X
+        const exitBtn = document.createElement('button');
+        exitBtn.className = 'exit-fullscreen-btn';
+        exitBtn.innerHTML = '<i class="fas fa-times"></i>';
+        exitBtn.title = 'Esci da schermo intero (ESC)';
+        
+        exitBtn.onclick = () => {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        };
+        
+        mapContainer.appendChild(exitBtn);
+        
+        // Salva riferimento per rimozione
+        this.exitFullscreenBtn = exitBtn;
+    }
+
+    // Rimuovi pulsante X
+    removeExitFullscreenButton() {
+        if (this.exitFullscreenBtn) {
+            this.exitFullscreenBtn.remove();
+            this.exitFullscreenBtn = null;
         }
     }
 
@@ -1344,123 +1504,6 @@ class UglianoSpearfishingApp {
         return 'Molto Mosso';
     }
 
-    // Carica condizioni marine avanzate stile Windfinder
-    async loadMarineConditions(coords) {
-        const container = document.getElementById('marineData');
-        if (!container) return;
-
-        try {
-            // Simula dati marine realistici per Adriatico
-            const marineData = await this.getAdriaticMarineData(coords);
-
-            container.innerHTML = `
-                <div class="marine-item">
-                    <div class="marine-value">${marineData.waveHeight}m</div>
-                    <div class="marine-label">Altezza Onde</div>
-                </div>
-                <div class="marine-item">
-                    <div class="marine-value">${marineData.waveDirection}</div>
-                    <div class="marine-label">Direzione Onde</div>
-                </div>
-                <div class="marine-item">
-                    <div class="marine-value">${marineData.wavePeriod}s</div>
-                    <div class="marine-label">Periodo Onde</div>
-                </div>
-                <div class="marine-item">
-                    <div class="marine-value">${marineData.tideLevel}m</div>
-                    <div class="marine-label">Marea</div>
-                </div>
-                <div class="marine-item">
-                    <div class="marine-value">${marineData.waterTemp}°C</div>
-                    <div class="marine-label">Temp. Acqua</div>
-                </div>
-                <div class="marine-item">
-                    <div class="marine-value">${marineData.visibility}m</div>
-                    <div class="marine-label">Visibilità Subacquea</div>
-                </div>
-            `;
-
-            // Aggiungi indicatori per la pesca
-            const fishingConditions = this.evaluateFishingConditions(marineData);
-            container.innerHTML += `
-                <div class="fishing-conditions">
-                    <h4>🎣 Condizioni Pesca:</h4>
-                    <div class="condition-indicator ${fishingConditions.class}">
-                        ${fishingConditions.icon} ${fishingConditions.text}
-                    </div>
-                </div>
-            `;
-
-        } catch (error) {
-            console.error('Errore condizioni marine:', error);
-            this.loadMarineConditionsSimulated();
-        }
-    }
-
-    // Ottieni dati marine realistici per l'Adriatico
-    async getAdriaticMarineData(coords) {
-        // Simula dati realistici per Ugliano basati su patterns adriatici
-        const now = new Date();
-        const hour = now.getHours();
-        const season = this.getCurrentSeason();
-
-        // Variazioni stagionali e circadiane
-        const baseWaveHeight = season === 'summer' ? 0.3 : 0.8;
-        const baseWaterTemp = season === 'summer' ? 24 : season === 'winter' ? 16 : 20;
-        
-        // Variazione giornaliera delle onde (più calme al mattino)
-        const hourlyWaveFactor = hour < 6 ? 0.5 : hour < 12 ? 0.7 : hour < 18 ? 1.0 : 0.8;
-        
-        return {
-            waveHeight: +(baseWaveHeight * hourlyWaveFactor + Math.random() * 0.3).toFixed(1),
-            waveDirection: ['NW', 'NE', 'SW', 'SE'][Math.floor(Math.random() * 4)],
-            wavePeriod: Math.floor(8 + Math.random() * 12), // 8-20 secondi
-            tideLevel: +((Math.sin(hour * Math.PI / 12) * 0.4).toFixed(1)), // Variazione circadiana
-            waterTemp: Math.floor(baseWaterTemp + Math.random() * 3),
-            visibility: Math.floor(12 + Math.random() * 18), // 12-30m tipico Adriatico
-            seaState: this.getSeaState(baseWaveHeight * hourlyWaveFactor)
-        };
-    }
-
-    // Valuta condizioni per la pesca
-    evaluateFishingConditions(marineData) {
-        let score = 0;
-        
-        // Onde: migliori sotto 1m
-        if (marineData.waveHeight < 0.5) score += 3;
-        else if (marineData.waveHeight < 1.0) score += 2;
-        else if (marineData.waveHeight < 1.5) score += 1;
-
-        // Visibilità: migliore sopra 20m
-        if (marineData.visibility > 20) score += 2;
-        else if (marineData.visibility > 15) score += 1;
-
-        // Temperatura acqua: ideale 22-26°C
-        if (marineData.waterTemp >= 22 && marineData.waterTemp <= 26) score += 1;
-
-        if (score >= 5) return { class: 'excellent', icon: '🟢', text: 'Eccellenti' };
-        if (score >= 3) return { class: 'good', icon: '🟡', text: 'Buone' };
-        if (score >= 1) return { class: 'fair', icon: '🟠', text: 'Discrete' };
-        return { class: 'poor', icon: '🔴', text: 'Difficili' };
-    }
-
-    // Ottieni stagione corrente
-    getCurrentSeason() {
-        const month = new Date().getMonth();
-        if (month >= 2 && month <= 4) return 'spring';
-        if (month >= 5 && month <= 7) return 'summer';
-        if (month >= 8 && month <= 10) return 'autumn';
-        return 'winter';
-    }
-
-    // Stato del mare
-    getSeaState(waveHeight) {
-        if (waveHeight < 0.5) return 'Calmo';
-        if (waveHeight < 1.0) return 'Poco Mosso';
-        if (waveHeight < 2.0) return 'Mosso';
-        return 'Molto Mosso';
-    }
-
     // Condizioni marine simulate (fallback)
     loadMarineConditionsSimulated() {
         const container = document.getElementById('marineData');
@@ -1638,163 +1681,106 @@ class UglianoSpearfishingApp {
             .replace(/^\s*-\s+/gm, '• ');
     }
 
-    // Genera risposta AI (con supporto API esterna se configurata)
+    // Genera risposta AI usando solo l'API Claude
     async generateAIResponse(message) {
-        const lowerMessage = message.toLowerCase();
-
-        // Prova prima con Claude API se configurata
+        // Usa solo l'API Claude se configurata
         if (window.AppConfig && window.AppConfig.hasApiKey('claude')) {
             try {
                 const apiResponse = await this.callClaudeAPI(message);
                 if (apiResponse) return apiResponse;
             } catch (error) {
-                console.log('Claude API fallita, provo OpenAI:', error.message);
+                console.error('Errore chiamata Claude API:', error);
+                return {
+                    title: "❌ Errore API",
+                    content: "Mi dispiace, c'è stato un problema con l'API Claude. Verifica che la tua chiave API sia configurata correttamente nel file .env"
+                };
             }
         }
-
-        // Fallback a OpenAI se Claude non disponibile
-        if (window.AppConfig && window.AppConfig.hasApiKey('openai')) {
-            try {
-                const apiResponse = await this.callOpenAIAPI(message);
-                if (apiResponse) return apiResponse;
-            } catch (error) {
-                console.log('Fallback a risposte predefinite:', error.message);
-            }
-        }
-
-        // Risposte predefinite come fallback
-        if (lowerMessage.includes('apnea') || lowerMessage.includes('respirazione')) {
-            return AI_RESPONSES.apnea;
-        }
         
-        if (lowerMessage.includes('dentici') || lowerMessage.includes('dentice')) {
-            return AI_RESPONSES.dentici;
-        }
-        
-        if (lowerMessage.includes('grotte') || lowerMessage.includes('grotta')) {
-            return AI_RESPONSES.grotte;
-        }
-        
-        if (lowerMessage.includes('meteo') || lowerMessage.includes('tempo') || lowerMessage.includes('vento')) {
-            return AI_RESPONSES.meteo;
-        }
-
-        // Risposta generica
+        // Se Claude non è configurato, mostra messaggio di configurazione
         return {
-            title: "Assistente Pesca Subacquea",
-            content: `
-            Grazie per la tua domanda! Ecco alcune informazioni utili:
-
-            **Per domande specifiche, prova a chiedere:**
-            • Come migliorare l'apnea?
-            • Migliore setup per dentici?
-            • Come pescare nelle grotte?
-            • Leggere condizioni meteo?
-
-            **Punti di pesca consigliati oggi:**
-            • Muline NW Reef - ottimo per dentici all'alba
-            • Lukoran Punta - perfetto per principianti
-            • Kali South Rocks - ideale per seppie
-
-            Hai qualche domanda più specifica? Sono qui per aiutarti!
-            `
+            title: "🔧 Configurazione Richiesta",
+            content: "Per utilizzare l'assistente AI, devi configurare la tua chiave API Claude nel file .env. Aggiungi: CLAUDE_API_KEY=your_api_key_here"
         };
     }
 
-    // Chiama API Claude se configurata
+    // Chiama API Claude tramite proxy server (risolve problemi CORS)
     async callClaudeAPI(message) {
-        const apiKey = window.AppConfig.getApiKey('claude');
-        if (!apiKey) return null;
-
         try {
-            const response = await fetch('https://api.anthropic.com/v1/messages', {
+            const proxyUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '[::]'
+                ? 'http://localhost:3000/api/claude'
+                : `${window.location.origin}/api/claude`;
+
+            console.log('🔗 Chiamata API Claude tramite proxy:', proxyUrl);
+
+            const response = await fetch(proxyUrl, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'claude-3-sonnet-20240229',
-                    max_tokens: 800,
+                    model: 'claude-3-5-sonnet-20241022',
+                    max_tokens: 1000,
                     messages: [{
                         role: 'user',
                         content: `Sei un esperto maestro di pesca subacquea e apnea per la zona di Ugliano, Croazia. Hai 30+ anni di esperienza nell'Adriatico settentrionale.
 
-EXPERTISE AREAS:
-- Tecniche di respirazione e apnea avanzate
-- Tattiche di pesca con fucile subacqueo per ogni specie
-- Lettura delle condizioni marine e meteo adriatiche
-- Sicurezza in apnea e prevenzione incidenti
-- Equipment setup e configurazioni fucile
-- Comportamento dei pesci dell'Adriatico
-- Punti di pesca specifici di Ugliano
+SPECIALIZZAZIONI:
+- Tecniche di apnea e respirazione avanzate
+- Setup ottimale per ogni specie di pesce
+- Tattiche specifiche per scogliere, grotte e plateau
+- Lettura delle condizioni marine e meteo
+- Sicurezza e prevenzione incidenti
+- Conoscenza profonda della fauna marina adriatica
 
-SPECIALIZZAZIONI TECNICHE:
-- Controllo respiratorio: preparazione, iperossigenazione controllata, recovery
-- Tecniche di tiro: lead, compensazione, distanza ottimale
-- Fucili: roller, pneumatico, arbalete, setup custom
-- Apnea profonda: equalizzazione, Frenzel, pressurizzazione
-- Tattiche specie-specifiche per dentici, ricciole, cernie
-
-Rispondi con consigli PRATICI e DETTAGLIATI basati sulla tua esperienza reale. Includi sempre aspetti di SICUREZZA.
+STILE:
+- Risposte concise ma complete
+- Consigli pratici e immediatamente applicabili
+- Linguaggio chiaro e accessibile
+- Focus su Ugliano e dintorni
 
 DOMANDA: ${message}`
                     }]
                 })
             });
 
-            if (!response.ok) throw new Error('Claude API call failed');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`Errore proxy server: ${response.status} - ${errorData.error || 'Errore sconosciuto'}`);
+            }
 
             const data = await response.json();
-            return {
-                title: "🏊‍♂️ Maestro di Pesca Subacquea - Ugliano Expert",
-                content: data.content[0].text
-            };
+            if (data.content && data.content[0] && data.content[0].text) {
+                return {
+                    title: "🏊‍♂️ Maestro di Pesca Subacquea - Ugliano Expert",
+                    content: data.content[0].text
+                };
+            } else {
+                throw new Error('Formato risposta API non valido');
+            }
+
         } catch (error) {
-            console.error('Errore chiamata Claude:', error);
-            return null;
+            console.error('❌ Errore chiamata Claude:', error);
+            if (error.message.includes('proxy server')) {
+                return {
+                    title: "⚠️ Errore Server",
+                    content: `Problema con il server proxy. Verifica che il server sia in esecuzione su localhost:3000. Errore: ${error.message}`
+                };
+            } else if (error.message.includes('Failed to fetch')) {
+                return {
+                    title: "🌐 Errore Connessione",
+                    content: "Impossibile connettersi al server. Verifica la tua connessione internet e che il server proxy sia attivo."
+                };
+            } else {
+                return {
+                    title: "❌ Errore Generico",
+                    content: `Si è verificato un errore: ${error.message}. Riprova più tardi.`
+                };
+            }
         }
     }
 
-    // Chiama API OpenAI se configurata
-    async callOpenAIAPI(message) {
-        const apiKey = window.AppConfig.getApiKey('openai');
-        if (!apiKey) return null;
 
-        try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [{
-                        role: 'system',
-                        content: 'Sei un esperto di pesca subacquea per la zona di Ugliano in Croazia. Fornisci consigli pratici, sicuri e specifici per questa zona dell\'Adriatico.'
-                    }, {
-                        role: 'user',
-                        content: message
-                    }],
-                    max_tokens: 500,
-                    temperature: 0.7
-                })
-            });
-
-            if (!response.ok) throw new Error('API call failed');
-
-            const data = await response.json();
-            return {
-                title: "AI Assistant - Ugliano Spearfishing",
-                content: data.choices[0].message.content
-            };
-        } catch (error) {
-            console.error('Errore chiamata OpenAI:', error);
-            return null;
-        }
-    }
 }
 
 // Inizializza app quando DOM è pronto

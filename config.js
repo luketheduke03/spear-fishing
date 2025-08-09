@@ -1,28 +1,16 @@
 // Configurazione sicura per API keys
-// Non committare questo file su GitHub!
+// Questo file è sicuro per GitHub - le chiavi API vengono caricate da variabili d'ambiente
 
 class Config {
     constructor() {
-        // Chiavi API (sostituisci con le tue chiavi reali)
+        // Chiavi API (caricate da variabili d'ambiente)
         this.apiKeys = {
-            openweather: '', // Lascia vuoto per usare Open-Meteo gratuito
-            weatherapi: '', // Opzionale
-            openai: '', // Per AI assistant (opzionale)
-            claude: '' // Claude AI API key
+            claude: '' // Claude AI API key - caricata da variabili d'ambiente
         };
 
         // Configurazione API endpoints
         this.apiEndpoints = {
-            // Open-Meteo (completamente gratuito, no API key richiesta)
-            openMeteo: 'https://api.open-meteo.com/v1/forecast',
-            
-            // OpenWeatherMap (se hai una chiave API)
-            openWeather: 'https://api.openweathermap.org/data/2.5',
-            
-            // WeatherAPI (se hai una chiave API)
-            weatherApi: 'https://api.weatherapi.com/v1',
-            
-            // Claude API
+            // Claude API per AI assistant
             claude: 'https://api.anthropic.com/v1'
         };
 
@@ -65,19 +53,14 @@ class Config {
 // Istanza globale di configurazione
 window.AppConfig = new Config();
 
-// Esempio di configurazione (sostituisci con le tue chiavi)
-// window.AppConfig.setApiKeys({
-//     openweather: 'your_openweather_key_here',
-//     weatherapi: 'your_weatherapi_key_here',
-//     openai: 'your_openai_key_here'
-// });
+// Configurazione per l'API Claude (carica automaticamente da variabili d'ambiente)
+// Per sviluppo locale: crea un file .env con CLAUDE_API_KEY=your_claude_api_key_here
+// Per deployment: imposta la variabile d'ambiente CLAUDE_API_KEY nel tuo servizio hosting
 
-// Per deployment su Vercel o altri servizi, usa variabili d'ambiente:
-if (typeof process !== 'undefined' && process.env) {
-    window.AppConfig.setApiKeys({
-        openweather: process.env.OPENWEATHER_API_KEY || '',
-        weatherapi: process.env.WEATHERAPI_KEY || '',
-        openai: process.env.OPENAI_API_KEY || '',
-        claude: process.env.CLAUDE_API_KEY || ''
-    });
+// Carica la chiave API da variabili d'ambiente se disponibili
+if (typeof process !== 'undefined' && process.env && process.env.CLAUDE_API_KEY) {
+    window.AppConfig.setApiKey('claude', process.env.CLAUDE_API_KEY);
+} else if (typeof window !== 'undefined' && window.ENV && window.ENV.CLAUDE_API_KEY) {
+    // Per Vercel e altri servizi che espongono variabili d'ambiente al frontend
+    window.AppConfig.setApiKey('claude', window.ENV.CLAUDE_API_KEY);
 }
