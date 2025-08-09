@@ -1,0 +1,36 @@
+# API Keys e configurazioni sensibili
+.env
+config.local.js
+*.key
+
+# File di sistema
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Dependency directories
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Cache directories
+.cache/
+.tmp/
+
+# IDE e editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backup files
+*.bak
+*.backup
+
+# Temporary files
+*.tmp
+*.temp
