@@ -1,0 +1,55 @@
+/* Stile semplice, leggibile, mobile-first. Mantieni <200 righe. */
+:root {
+  --bg: #0f172a;
+  --card: #111827;
+  --muted: #94a3b8;
+  --text: #e5e7eb;
+  --accent: #22c55e;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu;
+  background: var(--bg); color: var(--text);
+}
+.topbar {
+  padding: 12px 16px; border-bottom: 1px solid #1f2937; position: sticky; top: 0; background: #0b1222;
+}
+.topbar h1 { margin: 0 0 8px; font-size: 18px; }
+.nav { display: flex; gap: 8px; flex-wrap: wrap; }
+.nav button, .button {
+  background: #1f2937; color: var(--text); border: 1px solid #263243; padding: 8px 12px; border-radius: 8px; cursor: pointer;
+}
+.nav button:hover, .button:hover { background: #243041; }
+
+main { padding: 12px; max-width: 1100px; margin: 0 auto; }
+.view { display: none; }
+.view.active { display: block; }
+
+#map { height: 60vh; width: 100%; border-radius: 10px; border: 1px solid #1f2937; }
+.panel { margin-top: 12px; background: var(--card); border: 1px solid #1f2937; border-radius: 10px; padding: 12px; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hint { color: var(--muted); font-size: 12px; }
+textarea { width: 100%; background: #0b1222; color: var(--text); border: 1px solid #1f2937; border-radius: 8px; padding: 8px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.card { background: var(--card); border: 1px solid #1f2937; border-radius: 12px; padding: 12px; }
+.card h3 { margin-top: 0; }
+.card img { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; }
+
+.tableWrap { overflow-x: auto; background: var(--card); border: 1px solid #1f2937; border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px 10px; border-bottom: 1px solid #1f2937; text-align: left; }
+th { color: #cbd5e1; }
+
+.footer { padding: 24px 12px; color: var(--muted); text-align: center; }
+
+/* Popup Leaflet leggibile su dark */
+.leaflet-popup-content-wrapper { background: #0b1222; color: var(--text); }
+.leaflet-popup-tip { background: #0b1222; }
+.leaflet-container a { color: #38bdf8; }
+
+@media (min-width: 900px) {
+  #map { height: 70vh; }
+}
+
